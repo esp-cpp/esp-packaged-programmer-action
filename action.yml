@@ -1,0 +1,114 @@
+name: 'ESP Packaged Programmer'
+description: 'Package esptool and the binaries into an executable'
+inputs:
+  zipfile-name: # id of the input
+    description: 'Name of the Zipfile to download. Should contain binaries and flash args'
+    required: true
+  programmer-name:
+    description: 'Base of the programmer executable. Will have architecture suffix appended.'
+    required: false
+    default: 'programmer'
+outputs:
+  artifact-name:
+    description: "Name of the programmer artifact that was packaged and uploaded"
+    value: ${{ steps.random-number-generator.outputs.random-number }}
+runs:
+  using: "composite"
+  steps:
+    steps:
+    - name: Check Runner OS
+      if: ${{ runner.os != 'Linux' && runner.os != 'Windows' && runner.os != 'macOS'}}
+      shell: bash
+      run: |
+        echo "::error title=⛔ error hint::Support Linux, Windows, and macOS Only"
+        exit 1
+    - name: Setup XCode
+      if: ${{ runner.os == 'macOS' }}
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: latest-stable
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Download the zipfile artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.zipfile-name }}
+
+    # Build if windows
+    - name: PyInstaller
+      if: ${{ runner.os == 'Windows'}}
+      id: pyinstaller
+      working-directory: '.'
+      run: |
+        # setup the python environment
+        ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
+        # now build the installer
+        ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
+        # TODO: old style using script...
+        pwsh -File .\build_cloud.ps1
+        # now actually make the artifact
+        # TODO: make the name here configurable!
+        $artifact_name="niji_$(git describe --tags --dirty)_windows.exe"
+        mv dist/programmer.exe ${artifact_name}
+        "artifactName=${artifact_name}" | Out-File -FilePath $env:GITHUB_ENV -Append
+        "artifact-name=$artifact_name" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    # Build if Linux
+    - name: PyInstaller
+      if: ${{ runner.os == 'Linux'}}
+      id: pyinstaller
+      working-directory: '.'
+      run: |
+        # setup the python environment
+        ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
+        # now build the installer
+        ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
+        # TODO: old style using script...
+        ./build_cloud.sh
+        # now actually make the artifact
+        # TODO: make the name here configurable!
+        artifact_name="niji_$(git describe --tags --dirty)_linux.bin"
+        mv dist/programmer $artifact_name
+        echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
+        echo "artifact-name=$artifact_name" >> $GITHUB_OUTPUT
+
+    # Build if MacOS
+    - name: PyInstaller
+      if: ${{ runner.os == 'macOS'}}
+      id: pyinstaller
+      working-directory: '.'
+      run: |
+        # setup the python environment
+        ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
+        # now build the installer
+        ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
+        # TODO: old style using script...
+        ./build_cloud.sh
+        # now actually make the artifact
+        # TODO: make the name here configurable!
+        artifact_name="niji_$(git describe --tags --dirty)_macos.bin"
+        mv dist/programmer $artifact_name
+        echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
+        echo "artifact-name=$artifact_name" >> $GITHUB_OUTPUT
+
+    # now actually upload the artifacts
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.artifactName }}
+        path: ${{ env.artifactName }}
+
+    # attach the files to the release (if there is one)
+    - name: Attach files to release
+      uses: softprops/action-gh-release@v2
+      if: ${{ github.event.release && github.event.action == 'published' }}
+      with:
+        files: ${{ env.artifactName }}

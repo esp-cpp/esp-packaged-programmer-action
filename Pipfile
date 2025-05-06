@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+esptool = "4.7.0"
+pyinstaller = ">=5.10.1" # required for esptool > 3
+pywin32-ctypes = "*"
+pefile = "*"
+macholib = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
