@@ -5,6 +5,20 @@ into executables which program the esp chip. It may work for other platforms on
 espressif chips such as Arduino / Platform.IO, but I have not designed / tested
 it with those environments.
 
+For an example repository which uses this action, please see
+[esp-usb-ble-hid](https://github.com/finger563/esp-usb-ble-hid).
+
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [ESP Packaged Programmer Action](#esp-packaged-programmer-action)
+  - [About](#about)
+    - [Required Build Artifacts](#required-build-artifacts)
+    - [Optional Build Artifacts](#optional-build-artifacts)
+  - [Using this action](#using-this-action)
+
+<!-- markdown-toc end -->
+
 ## About
 
 The output of this action is a binary which requires no other dependencies,
@@ -20,7 +34,25 @@ The primary use case for this action is to be run on releases, so that the
 executable will be automatically generated and added to the release for ease of
 use.
 
-### Required Build Outputs
+```yaml
+  package:
+    name: Package the binaries into an executables for Windows, MacOS, and Linux (Ubuntu)
+    needs: build
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: esp-cpp/esp-packaged-programmer-action@v1
+        with:
+          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
+          programmer-name: 'your_programmer_name'
+```
+
+See the example in [Using this action](#using-this-action) for a more complete
+example showing how to build your code and zip it for use by this action.
+
+### Required Build Artifacts
 
 It requires:
 - firmware.bin (or whatever the name of your project is, e.g. <project-name>.bin)
@@ -28,11 +60,14 @@ It requires:
 - partition-table.bin
 - flasher_args.json
 
-### Optional Build Outputs
+### Optional Build Artifacts
 
 May optionally contain filesystem binaries and associated -flash_args files such as:
 - littlefs.bin
 - littlefs-flash_args
+
+It also supports other partition image data such as
+- ota_data_initial.bin
 
 ## Using this action
 
