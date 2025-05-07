@@ -47,11 +47,35 @@ def main():
 
     for offset, filepath in flasher_args['flash_files'].items():
         command.append(offset)
-        # convert the filename to use resource path with bin/<filename> and add
-        # it to the command
-        filename = filepath.split('/')[-1] # get the filename
-        location = resource_path('bin/' + filename)
-        command.append(location)
+        # convert the filename to use resource path
+        command.append(resource_path(filepath))
+
+    print('Looking for -flash_args files in build directory... ')
+    # for each of the files in resource_path('build'), if they have
+    # '-flash_args' in the name, then we should:
+    #
+    # 1. open that file
+    # 2. split the file by newline
+    # 3. for each line, if it contains '0x', then
+    #   1. split the line by space into <offset> and <binary>
+    #   2. convert <binary> using resource_path(<binary>)
+    #   3. append the offset and binary to the command.
+    for filename in os.listdir(resource_path('build')):
+        print(f'Checking {filename}...')
+        # if the filename contains '-flash_args', then we should process it
+        if '-flash_args' in filename:
+            print(f'Found {filename}...')
+            flash_args_file = open(resource_path('build/' + filename), 'r').read()
+            # split the file by newline
+            for line in flash_args_file.splitlines():
+                print(f'Processing line: {line}')
+                # if the line contains '0x', then split the line by space into
+                if '0x' in line:
+                    offset, binary = line.split(' ')
+                    print(f'Found offset: {offset} and binary: {binary}')
+                    command.append(offset)
+                    command.append(resource_path(binary))
+                    print(f'Added {offset} and {resource_path(binary)} to command')
 
     # if the port argument is provided, add it to the command
     if args.port:
