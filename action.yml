@@ -21,6 +21,16 @@ runs:
       run: |
         echo "::error title=⛔ error hint::Support Linux, Windows, and macOS Only"
         exit 1
+
+    - name: Determine parent repo version
+      shell: bash
+      run: |
+        # Get the version of the parent repo
+        version=$(git describe --tags --dirty)
+        echo "${version}"
+        # Set the version as an output variable
+        echo "version_str=$version" >> $GITHUB_ENV
+
     - name: Setup XCode
       if: ${{ runner.os == 'macOS' }}
       uses: maxim-lobanov/setup-xcode@v1
@@ -63,7 +73,7 @@ runs:
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
         # now actually make the artifact
-        $artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_windows.exe"
+        $artifact_name="${{ inputs.programmer-name }}_${{ env.version_str }}_windows.exe"
         mv dist/programmer.exe ${artifact_name}
         "artifactName=${artifact_name}" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -80,7 +90,7 @@ runs:
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
         # now actually make the artifact
-        artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_linux.bin"
+        artifact_name="${{ inputs.programmer-name }}_${{ env.version_str }}_linux.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
 
@@ -101,7 +111,7 @@ runs:
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
         # now actually make the artifact
-        artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_macos.bin"
+        artifact_name="${{ inputs.programmer-name }}_${{ env.version_str }}_macos.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
 
