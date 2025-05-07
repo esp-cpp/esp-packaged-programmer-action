@@ -79,6 +79,10 @@ runs:
       working-directory: '.'
       shell: bash
       run: |
+        # print all the files here
+        ls -la
+        # ensure the build folder contains the files we expect
+        ls -la build
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
         # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
