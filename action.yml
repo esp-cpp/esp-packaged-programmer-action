@@ -11,7 +11,7 @@ inputs:
 outputs:
   artifact-name:
     description: "Name of the programmer artifact that was packaged and uploaded"
-    value: ${{ steps.random-number-generator.outputs.random-number }}
+    value: ${{ steps.pyinstaller.outputs.artifact-name }}
 runs:
   using: "composite"
   steps:
