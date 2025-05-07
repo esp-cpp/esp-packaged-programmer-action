@@ -5,17 +5,23 @@ into executables which program the esp chip. It may work for other platforms on
 espressif chips such as Arduino / Platform.IO, but I have not designed / tested
 it with those environments.
 
+## About
+
 The output of this action is a binary which requires no other dependencies,
 files, or installation, but allows anyone to flash your code onto the
 appropriate espressif chip.
 
 It simply packages `esptool.py` with your binaries/flash_args (from your build).
 
+### Required Build Outputs
+
 It requires:
 - firmware.bin (or whatever the name of your project is, e.g. <project-name>.bin)
 - bootloader.bin
 - partition-table.bin
 - flasher_args.json
+
+### Optional Build Outputs
 
 May optionally contain filesystem binaries and associated -flash_args files such as:
 - littlefs.bin
@@ -26,9 +32,8 @@ May optionally contain filesystem binaries and associated -flash_args files such
 Below is an example workflow file that:
 
 1. Builds the binaries using esp-idf's github action `espressif/esp-idf-ci-action`
-2. Zips the binaries and flash args into a single archive
-3. Uploads the zip file for other jobs to use
-4. Runs this action (`esp-cpp/esp-packaged-programmer-action`) to build those
+2. Zips the binaries and flash args into a single archive, uploading it for other jobs to use
+3. Runs this action (`esp-cpp/esp-packaged-programmer-action`) to build those
    binaries into executable flashing programs for `windows`, `macos`, and
    `linux`.
 
@@ -47,7 +52,7 @@ jobs:
     name: Build the binaries and upload them for packaging
     # you need this to link the zip file name to the packaging job(s)
     outputs:
-      zipfile: ${{ steps.zip_step.outputs.zipfile }}
+      zipfile-id: ${{ steps.zip_step.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v4
       - name: Build the code
@@ -57,20 +62,20 @@ jobs:
           target: esp32s3
           path: '.'
           command: idf.py build
-    # TODO: you should change the zip name here to be what you want
-    # TODO: you should update the binaries and such that are flashed to match what you need
-    - name: Zip up build files to be downloaded by the packagers
+    - name: Upload build files in a single zip
       id: zip_step
-      run: |
-        zip_name="your_firmware_name_$(git describe --tags --dirty).zip"
-        zip -r -j $zip_name build/your_firmware_name.bin build/your_firmware_name.elf build/bootloader/bootloader.bin build/partition_table/partition-table.bin build/littlefs.bin build/ota_data_initial.bin build/flasher_args.json build/littlefs-flash_args
-        echo "artifact_name=$zip_name" >> "$GITHUB_ENV"
-        echo "zipfile=$zip_name" >> "$GITHUB_OUTPUT"
-    - name: Upload zipped build files
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.artifact_name }}
-        path: ${{ env.artifact_name }}
+        name: 'firmware'
+        path: |
+          build/your_firmware_name.bin
+          build/your_firmware_name.elf
+          build/flasher_args.json
+          build/bootloader/bootloader.bin
+          build/partition_table/partition-table.bin
+          build/ota_data_initial.bin
+          build/littlefs.bin 
+          build/littlefs-flash_args
 
   # Add this if you want to package the binaries into an executable for Windows
   package_windows:
@@ -81,10 +86,10 @@ jobs:
       - uses: esp-cpp/esp-packaged-programmer-action@v1
         id: windows-package
         with:
-          zipfile-name: ${{ needs.build.outputs.zipfile }}
+          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           # NOTE: you can provide your own name here. default is 'programmer'. 
           #       Will be appended with git version and platform.
-          programmer-name: 'custom_programmer'
+          programmer-name: 'your_programmer_name'
 
   # Add this if you want to package the binaries into an executable for MacOS
   package_macos:
@@ -95,10 +100,10 @@ jobs:
       - uses: esp-cpp/esp-packaged-programmer-action@v1
         id: macos-package
         with:
-          zipfile-name: ${{ needs.build.outputs.zipfile }}
+          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           # NOTE: you can provide your own name here. default is 'programmer'. 
           #       Will be appended with git version and platform.
-          programmer-name: 'custom_programmer'
+          programmer-name: 'your_programmer_name'
 
   # Add this if you want to package the binaries into an executable for Linux
   package_linux:
@@ -109,10 +114,10 @@ jobs:
       - uses: esp-cpp/esp-packaged-programmer-action@v1
         id: linux-package
         with:
-          zipfile-name: ${{ needs.build.outputs.zipfile }}
+          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           # NOTE: you can provide your own name here. default is 'programmer'. 
           #       Will be appended with git version and platform.
-          programmer-name: 'custom_programmer'
+          programmer-name: 'your_programmer_name'
       # Example of how you can use the artifact name in a subsequent step or script
       - run: echo artifact-name "$ARTIFACT_NAME"
         shell: bash
