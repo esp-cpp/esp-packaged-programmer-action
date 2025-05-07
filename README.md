@@ -83,51 +83,17 @@ jobs:
             build/flash_args
             build/*-flash_args
 
-  # Add this if you want to package the binaries into an executable for Windows
-  package_windows:
+  package:
+    name: Package the binaries into an executables for Windows, MacOS, and Linux (Ubuntu)
     needs: build
-    runs-on: windows-latest
-    name: Package the binaries into an executable for Windows Systems
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: esp-cpp/esp-packaged-programmer-action@v1
-        id: windows-package
         with:
           zipfile-id: ${{ needs.build.outputs.zipfile-id }}
-          # NOTE: you can provide your own name here. default is 'programmer'. 
-          #       Will be appended with git version and platform.
           programmer-name: 'your_programmer_name'
-
-  # Add this if you want to package the binaries into an executable for MacOS
-  package_macos:
-    needs: build
-    runs-on: macos-latest
-    name: Package the binaries into an executable for MacOS Systems
-    steps:
-      - uses: esp-cpp/esp-packaged-programmer-action@v1
-        id: macos-package
-        with:
-          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
-          # NOTE: you can provide your own name here. default is 'programmer'. 
-          #       Will be appended with git version and platform.
-          programmer-name: 'your_programmer_name'
-
-  # Add this if you want to package the binaries into an executable for Linux
-  package_linux:
-    needs: build
-    runs-on: ubuntu-latest
-    name: Package the binaries into an executable for Linux systems
-    steps:
-      - uses: esp-cpp/esp-packaged-programmer-action@v1
-        id: linux-package
-        with:
-          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
-          # NOTE: you can provide your own name here. default is 'programmer'. 
-          #       Will be appended with git version and platform.
-          programmer-name: 'your_programmer_name'
-      # Example of how you can use the artifact name in a subsequent step or script
-      - run: echo artifact-name "$ARTIFACT_NAME"
-        shell: bash
-        env:
-          RANDOM_NUMBER: ${{ steps.linux-package.outputs.artifact-name }}
 ```
 
