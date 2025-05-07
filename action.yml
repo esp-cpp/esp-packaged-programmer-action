@@ -5,7 +5,7 @@ inputs:
     description: 'Name of the Zipfile to download. Should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files.'
     required: true
   programmer-name:
-    description: 'Base of the programmer executable. Will have OS suffix (e.g. windows, linux, macos) appended.'
+    description: 'Base name of the programmer executable. Will have version tag (e.g. v1.0.0) and OS suffix (e.g. windows, linux, macos) appended.'
     required: false
     default: 'programmer'
 outputs:
@@ -57,7 +57,7 @@ runs:
         pwsh -File .\build_cloud.ps1
         # now actually make the artifact
         # TODO: make the name here configurable!
-        $artifact_name="programmer_$(git describe --tags --dirty)_windows.exe"
+        $artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_windows.exe"
         mv dist/programmer.exe ${artifact_name}
         "artifactName=${artifact_name}" | Out-File -FilePath $env:GITHUB_ENV -Append
         "artifact-name=$artifact_name" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -76,7 +76,7 @@ runs:
         ./build_cloud.sh
         # now actually make the artifact
         # TODO: make the name here configurable!
-        artifact_name="programmer_$(git describe --tags --dirty)_linux.bin"
+        artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_linux.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
         echo "artifact-name=$artifact_name" >> $GITHUB_OUTPUT
@@ -95,7 +95,7 @@ runs:
         ./build_cloud.sh
         # now actually make the artifact
         # TODO: make the name here configurable!
-        artifact_name="programmer_$(git describe --tags --dirty)_macos.bin"
+        artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_macos.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
         echo "artifact-name=$artifact_name" >> $GITHUB_OUTPUT
