@@ -1,7 +1,7 @@
 name: 'ESP Packaged Programmer'
 description: 'Package esptool and the binaries into an executable'
 inputs:
-  zipfile-name: # id of the input
+  zipfile-name:
     description: 'Name of the Zipfile to download. Should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files.'
     required: true
   programmer-name:
@@ -51,12 +51,11 @@ runs:
       run: |
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
+        # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
+        git clone --depth 1 --branch v4.7.0 https://github.com/espressif/esptool
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
-        # TODO: old style using script...
-        pwsh -File .\build_cloud.ps1
         # now actually make the artifact
-        # TODO: make the name here configurable!
         $artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_windows.exe"
         mv dist/programmer.exe ${artifact_name}
         "artifactName=${artifact_name}" | Out-File -FilePath $env:GITHUB_ENV -Append
@@ -70,12 +69,11 @@ runs:
       run: |
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
+        # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
+        git clone --depth 1 --branch v4.7.0 https://github.com/espressif/esptool
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
-        # TODO: old style using script...
-        ./build_cloud.sh
         # now actually make the artifact
-        # TODO: make the name here configurable!
         artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_linux.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
@@ -89,12 +87,11 @@ runs:
       run: |
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
+        # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
+        git clone --depth 1 --branch v4.7.0 https://github.com/espressif/esptool
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
-        # TODO: old style using script...
-        ./build_cloud.sh
         # now actually make the artifact
-        # TODO: make the name here configurable!
         artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_macos.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
