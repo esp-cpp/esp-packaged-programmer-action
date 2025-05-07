@@ -26,6 +26,7 @@ runs:
         echo "::error title=⛔ error hint::Support Linux, Windows, and macOS Only"
         exit 1
 
+    # It is a release, so we can get the version from the release tag
     - name: Set the version string if this was run as part of a release
       if: ${{ github.event.release && github.event.action == 'published' }}
       shell: bash
@@ -36,12 +37,32 @@ runs:
         # Set the version as an output variable
         echo "version_str=$version" >> $GITHUB_ENV
 
-    - name: Otherwise
-      if: ${{ !(github.event.release && github.event.action == 'published') }}
+    # It's not a release and the version is NOT 'unknown', which means the user
+    # provided a specific version, so just set the version string accordingly
+    - name: Otherwise use git to get the version
+      if: ${{ !(github.event.release && github.event.action == 'published') &&
+            inputs.version-str != 'unknown' }}
       shell: bash
       run: |
         # Get the version of the parent repo
         version=${{ inputs.version-str }}
+        echo "Version: ${version}"
+        # Set the version as an output variable
+        echo "version_str=$version" >> $GITHUB_ENV
+
+    # It's not a release and the version is 'unknown', so we need to get the
+    # version from the parent repo
+    - name: Otherwise clone the parent repo and get the version
+      if: ${{ !(github.event.release && github.event.action == 'published') &&
+            inputs.version-str == 'unknown' }}
+      uses: actions/checkout@v4
+    - name: Otherwise use git to get the version
+      if: ${{ !(github.event.release && github.event.action == 'published') &&
+            inputs.version-str == 'unknown' }}
+      shell: bash
+      run: |
+        # Get the version of the parent repo
+        version=$(git describe --tags --dirty)
         echo "Version: ${version}"
         # Set the version as an output variable
         echo "version_str=$version" >> $GITHUB_ENV
