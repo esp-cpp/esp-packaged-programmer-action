@@ -43,7 +43,7 @@ use.
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: esp-cpp/esp-packaged-programmer-action@v1
+      - uses: esp-cpp/esp-packaged-programmer-action@v1.0.0
         with:
           zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           programmer-name: 'your_programmer_name'
@@ -126,7 +126,7 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: esp-cpp/esp-packaged-programmer-action@v1
+      - uses: esp-cpp/esp-packaged-programmer-action@v1.0.0
         with:
           zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           programmer-name: 'your_programmer_name'
