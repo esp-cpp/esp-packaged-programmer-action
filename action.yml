@@ -5,13 +5,9 @@ inputs:
     description: 'Artifact ID for the Zipfile to download. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files.'
     required: true
   programmer-name:
-    description: 'Base name of the programmer executable. Will have version tag (e.g. v1.0.0) and OS suffix (e.g. windows, linux, macos) appended.'
+    description: 'Base name of the programmer executable. Will have version tag (e.g. v1.0.0 or commit hash if no tags) and OS suffix (e.g. windows, linux, macos) appended.'
     required: false
     default: 'programmer'
-  version-str:
-    description: 'Version string to append to the programmer executable. If not provided, will be set to the version of the parent repo if this action is run as part of a release. Otherwise the default will be set to "unknown".'
-    required: false
-    default: ${{ github.event.release && github.event.release.tag_name || 'unknown' }}
 outputs:
   artifact-name:
     description: "Name of the programmer artifact that was packaged and uploaded"
@@ -26,49 +22,18 @@ runs:
         echo "::error title=⛔ error hint::Support Linux, Windows, and macOS Only"
         exit 1
 
-    # It is a release, so we can get the version from the release tag
-    - name: Set the version string if this was run as part of a release
-      if: ${{ github.event.release && github.event.action == 'published' }}
-      shell: bash
-      run: |
-        # Get the version of the parent repo
-        version=${{ github.event.release.tag_name }}
-        echo "Version: ${version}"
-        # Set the version as an output variable
-        echo "version_str=$version" >> $GITHUB_ENV
-
-    # It's not a release and the version is NOT 'unknown', which means the user
-    # provided a specific version, so just set the version string accordingly
-    - name: Otherwise use git to get the version
-      if: ${{ !(github.event.release && github.event.action == 'published') &&
-            inputs.version-str != 'unknown' }}
-      shell: bash
-      run: |
-        # Get the version of the parent repo
-        version=${{ inputs.version-str }}
-        echo "Version: ${version}"
-        # Set the version as an output variable
-        echo "version_str=$version" >> $GITHUB_ENV
-
-    # It's not a release and the version is 'unknown', so we need to get the
-    # version from the parent repo
-    - name: Otherwise clone the parent repo and get the version
-      if: ${{ !(github.event.release && github.event.action == 'published') &&
-            inputs.version-str == 'unknown' }}
+    - name: Clone the parent repo (to get the version)
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: Otherwise use git to get the version
-      if: ${{ !(github.event.release && github.event.action == 'published') &&
-            inputs.version-str == 'unknown' }}
+
+    - name: Get the version
       shell: bash
       run: |
         echo "Trying to get the version from the parent repo"
-        # print out all files here so we know where we are...
-        find .
         # Get the version of the parent repo
-        version=$(git describe --tags --dirty)
-        echo "Version: ${version}"
+        version=$(git describe --tags --dirty || git rev-parse --short HEAD)
+        echo "Got version: ${version}"
         # Set the version as an output variable
         echo "version_str=$version" >> $GITHUB_ENV
 
@@ -106,7 +71,6 @@ runs:
       working-directory: ${{ github.action_path }}
       shell: pwsh
       run: |
-        # change the build-artifacts directory to the current working directory
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
         # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
@@ -118,9 +82,9 @@ runs:
         mv dist/programmer.exe ${artifact_name}
         "artifactName=${artifact_name}" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-    # Build if Linux
+    # Build if Linux or macOS
     - name: PyInstaller
-      if: ${{ runner.os == 'Linux'}}
+      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
       working-directory: ${{ github.action_path }}
       shell: bash
       run: |
@@ -131,28 +95,7 @@ runs:
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
         # now actually make the artifact
-        artifact_name="${{ inputs.programmer-name }}_${{ env.version_str }}_linux.bin"
-        mv dist/programmer $artifact_name
-        echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
-
-    # Build if MacOS
-    - name: PyInstaller
-      if: ${{ runner.os == 'macOS' }}
-      working-directory: ${{ github.action_path }}
-      shell: bash
-      run: |
-        # we don't control the name of the unpacked archive (folder) that's
-        # within build/ so simply move everything within that subfolder into
-        # build/
-        find build -maxdepth 2 -mindepth 2 -exec mv {} build/. \;
-        # setup the python environment
-        ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
-        # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
-        git clone --depth 1 --branch v4.7.0 https://github.com/espressif/esptool
-        # now build the installer
-        ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
-        # now actually make the artifact
-        artifact_name="${{ inputs.programmer-name }}_${{ env.version_str }}_macos.bin"
+        artifact_name="${{ inputs.programmer-name }}_${{ env.version_str }}_${{ runner.os.lower() }}.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
 
