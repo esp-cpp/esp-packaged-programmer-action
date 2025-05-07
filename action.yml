@@ -64,6 +64,9 @@ runs:
         # within build/ so simply move everything within that subfolder into
         # build/
         find build -maxdepth 2 -mindepth 2 -exec mv {} build/. \;
+        # also, we don't want any elf files if they were uploaded (which they
+        # sometimes are for debug purposes), so delete them
+        find build -name "*.elf" -type f -delete
 
     # Build if windows
     - name: PyInstaller
