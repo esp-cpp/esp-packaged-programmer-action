@@ -62,20 +62,19 @@ jobs:
           target: esp32s3
           path: '.'
           command: idf.py build
-    - name: Upload build files in a single zip
-      id: zip_step
-      uses: actions/upload-artifact@v4
-      with:
-        name: 'firmware'
-        path: |
-          build/your_firmware_name.bin
-          build/your_firmware_name.elf
-          build/flasher_args.json
-          build/bootloader/bootloader.bin
-          build/partition_table/partition-table.bin
-          build/ota_data_initial.bin
-          build/littlefs.bin 
-          build/littlefs-flash_args
+      - name: Upload build files in a single zip
+        id: zip_step
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'firmware'
+          path: |
+            build/*.bin
+            build/*.elf
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+            build/flasher_args.json
+            build/flash_args
+            build/*-flash_args
 
   # Add this if you want to package the binaries into an executable for Windows
   package_windows:
