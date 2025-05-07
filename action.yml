@@ -15,7 +15,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    steps:
     - name: Check Runner OS
       if: ${{ runner.os != 'Linux' && runner.os != 'Windows' && runner.os != 'macOS'}}
       shell: bash

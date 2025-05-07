@@ -13,6 +13,13 @@ appropriate espressif chip.
 
 It simply packages `esptool.py` with your binaries/flash_args (from your build).
 
+This action will upload the resultant executable to the Github Action Job, and
+(if triggered from release) to the release as well.
+
+The primary use case for this action is to be run on releases, so that the
+executable will be automatically generated and added to the release for ease of
+use.
+
 ### Required Build Outputs
 
 It requires:
