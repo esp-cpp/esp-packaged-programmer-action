@@ -8,6 +8,10 @@ inputs:
     description: 'Base name of the programmer executable. Will have version tag (e.g. v1.0.0) and OS suffix (e.g. windows, linux, macos) appended.'
     required: false
     default: 'programmer'
+  version-str:
+    description: 'Version string to append to the programmer executable. If not provided, will be set to the version of the parent repo if this action is run as part of a release. Otherwise the default will be set to "unknown".'
+    required: false
+    default: ${{ github.event.release && github.event.release.tag_name || 'unknown' }}
 outputs:
   artifact-name:
     description: "Name of the programmer artifact that was packaged and uploaded"
@@ -22,12 +26,23 @@ runs:
         echo "::error title=⛔ error hint::Support Linux, Windows, and macOS Only"
         exit 1
 
-    - name: Determine parent repo version
+    - name: Set the version string if this was run as part of a release
+      if: ${{ github.event.release && github.event.action == 'published' }}
       shell: bash
       run: |
         # Get the version of the parent repo
-        version=$(git describe --tags --dirty)
-        echo "${version}"
+        version=${{ github.event.release.tag_name }}
+        echo "Version: ${version}"
+        # Set the version as an output variable
+        echo "version_str=$version" >> $GITHUB_ENV
+
+    - name: Otherwise
+      if: ${{ !(github.event.release && github.event.action == 'published') }}
+      shell: bash
+      run: |
+        # Get the version of the parent repo
+        version=${{ inputs.version-str }}
+        echo "Version: ${version}"
         # Set the version as an output variable
         echo "version_str=$version" >> $GITHUB_ENV
 
