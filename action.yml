@@ -29,6 +29,7 @@ runs:
 
     - name: Set up Python
       uses: actions/setup-python@v5
+      id: id_python_310
       with:
         python-version: '3.10'
 
