@@ -11,7 +11,7 @@ inputs:
 outputs:
   artifact-name:
     description: "Name of the programmer artifact that was packaged and uploaded"
-    value: ${{ steps.pyinstaller.outputs.artifact-name }}
+    value: ${{ steps.output.outputs.artifact-name }}
 runs:
   using: "composite"
   steps:
@@ -46,8 +46,8 @@ runs:
     # Build if windows
     - name: PyInstaller
       if: ${{ runner.os == 'Windows'}}
-      id: pyinstaller
       working-directory: '.'
+      shell: pwsh
       run: |
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
@@ -59,13 +59,12 @@ runs:
         $artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_windows.exe"
         mv dist/programmer.exe ${artifact_name}
         "artifactName=${artifact_name}" | Out-File -FilePath $env:GITHUB_ENV -Append
-        "artifact-name=$artifact_name" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     # Build if Linux
     - name: PyInstaller
       if: ${{ runner.os == 'Linux'}}
-      id: pyinstaller
       working-directory: '.'
+      shell: bash
       run: |
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
@@ -77,13 +76,12 @@ runs:
         artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_linux.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
-        echo "artifact-name=$artifact_name" >> $GITHUB_OUTPUT
 
     # Build if MacOS
     - name: PyInstaller
       if: ${{ runner.os == 'macOS'}}
-      id: pyinstaller
       working-directory: '.'
+      shell: bash
       run: |
         # setup the python environment
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
@@ -95,7 +93,12 @@ runs:
         artifact_name="${{ inputs.programmer-name }}_$(git describe --tags --dirty)_macos.bin"
         mv dist/programmer $artifact_name
         echo "artifactName=$artifact_name" >> "$GITHUB_ENV"
-        echo "artifact-name=$artifact_name" >> $GITHUB_OUTPUT
+
+    # Set the ouput
+    - name: Set the action output
+      id: output
+      shell: bash
+      run: echo "artifact-name=${{ env.artifactName }}" >> $GITHUB_OUTPUT
 
     # now actually upload the artifacts
     - uses: actions/upload-artifact@v4
