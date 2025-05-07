@@ -5,10 +5,40 @@ into executables which program the esp chip. It may work for other platforms on
 espressif chips such as Arduino / Platform.IO, but I have not designed / tested
 it with those environments.
 
+The output of this action is a binary which requires no other dependencies,
+files, or installation, but allows anyone to flash your code onto the
+appropriate espressif chip.
+
+It simply packages `esptool.py` with your binaries/flash_args (from your build).
+
+It requires:
+- firmware.bin (or whatever the name of your project is, e.g. <project-name>.bin)
+- bootloader.bin
+- partition-table.bin
+- flasher_args.json
+
+May optionally contain filesystem binaries and associated -flash_args files such as:
+- littlefs.bin
+- littlefs-flash_args
+
 ## Using this action
 
+Below is an example workflow file that:
+
+1. Builds the binaries using esp-idf's github action `espressif/esp-idf-ci-action`
+2. Zips the binaries and flash args into a single archive
+3. Uploads the zip file for other jobs to use
+4. Runs this action (`esp-cpp/esp-packaged-programmer-action`) to build those
+   binaries into executable flashing programs for `windows`, `macos`, and
+   `linux`.
+
 ```yaml
-on: [push]
+on: 
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
   # this would be your normal build job to build your esp binaries
@@ -52,11 +82,9 @@ jobs:
         id: windows-package
         with:
           zipfile-name: ${{ needs.build.outputs.zipfile }}
-      - name: Upload Packaged Executable (Windows)
-        uses: actions/upload-artifact@v4
-          with:
-            name: ${{ steps.windows-package.outputs.artifact-name }}
-            path: ${{ steps.windows-package.outputs.artifact-name }}
+          # NOTE: you can provide your own name here. default is 'programmer'. 
+          #       Will be appended with git version and platform.
+          programmer-name: 'custom_programmer'
 
   # Add this if you want to package the binaries into an executable for MacOS
   package_macos:
@@ -68,11 +96,9 @@ jobs:
         id: macos-package
         with:
           zipfile-name: ${{ needs.build.outputs.zipfile }}
-      - name: Upload Packaged Executable (MacOS)
-        uses: actions/upload-artifact@v4
-          with:
-            name: ${{ steps.macos-package.outputs.artifact-name }}
-            path: ${{ steps.macos-package.outputs.artifact-name }}
+          # NOTE: you can provide your own name here. default is 'programmer'. 
+          #       Will be appended with git version and platform.
+          programmer-name: 'custom_programmer'
 
   # Add this if you want to package the binaries into an executable for Linux
   package_linux:
@@ -84,14 +110,13 @@ jobs:
         id: linux-package
         with:
           zipfile-name: ${{ needs.build.outputs.zipfile }}
-      - run: echo random-number "$RANDOM_NUMBER"
+          # NOTE: you can provide your own name here. default is 'programmer'. 
+          #       Will be appended with git version and platform.
+          programmer-name: 'custom_programmer'
+      # Example of how you can use the artifact name in a subsequent step or script
+      - run: echo artifact-name "$ARTIFACT_NAME"
         shell: bash
         env:
-          RANDOM_NUMBER: ${{ steps.foo.outputs.random-number }}
-      - name: Upload Packaged Executable (Linux)
-        uses: actions/upload-artifact@v4
-          with:
-            name: ${{ steps.linux-package.outputs.artifact-name }}
-            path: ${{ steps.linux-package.outputs.artifact-name }}
+          RANDOM_NUMBER: ${{ steps.linux-package.outputs.artifact-name }}
 ```
 
