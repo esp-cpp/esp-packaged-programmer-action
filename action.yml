@@ -56,11 +56,15 @@ runs:
       if: ${{ !(github.event.release && github.event.action == 'published') &&
             inputs.version-str == 'unknown' }}
       uses: actions/checkout@v4
+      fetch-depth: 0
     - name: Otherwise use git to get the version
       if: ${{ !(github.event.release && github.event.action == 'published') &&
             inputs.version-str == 'unknown' }}
       shell: bash
       run: |
+        echo "Trying to get the version from the parent repo"
+        # print out all files here so we know where we are...
+        find .
         # Get the version of the parent repo
         version=$(git describe --tags --dirty)
         echo "Version: ${version}"
