@@ -45,9 +45,14 @@ use.
     steps:
       - uses: esp-cpp/esp-packaged-programmer-action@v1.0.1
         with:
-          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
+          zipfile-name: 'your-build-artifacts'
           programmer-name: 'your_programmer_name'
 ```
+
+> NOTE: you can use either `zipfile-name` or `zipfile-id` as input to this
+> script. If you are using MATRIX strategy (for which you may struggle to get
+> the zipfile id output for each step), you may want to use the `zipfile-name`
+> instead.
 
 See the example in [Using this action](#using-this-action) for a more complete
 example showing how to build your code and zip it for use by this action.
@@ -78,6 +83,10 @@ Below is an example workflow file that:
 3. Runs this action (`esp-cpp/esp-packaged-programmer-action`) to build those
    binaries into executable flashing programs for `windows`, `macos`, and
    `linux`.
+
+In the example below, we are using the `zipfile-id` input and hard-linking that
+to the `build` job output. You could instead use the `zipfile-name` input and
+provide it the name of the artifact (`firmware`) in this case.
 
 ```yaml
 on: 
