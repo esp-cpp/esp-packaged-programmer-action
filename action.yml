@@ -2,8 +2,13 @@ name: 'ESP Packaged Programmer'
 description: 'Package esptool and the binaries into an executable'
 inputs:
   zipfile-id:
-    description: 'Artifact ID for the Zipfile to download. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files.'
-    required: true
+    description: 'Artifact ID for the Zipfile to download. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files. NOTE: only one of zipfile-id or zipfile-name should be set.'
+    required: false
+    default: ''
+  zipfile-name:
+    description: 'Name of the zipfile artifact that was packaged and uploaded. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files. NOTE: only one of zipfile-id or zipfile-name should be set.'
+    required: false
+    default: ''
   programmer-name:
     description: 'Base name of the programmer executable. Will have version tag (e.g. v1.0.0 or commit hash if no tags) and OS suffix (e.g. windows, linux, macos) appended.'
     required: false
@@ -15,6 +20,20 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Ensure that one of zipfile-id or zipfile-name is set
+      if: ${{ inputs.zipfile-id == '' && inputs.zipfile-name == '' }}
+      shell: bash
+      run: |
+        echo "::error title=⛔ error hint::Either zipfile-id or zipfile-name must be set"
+        exit 1
+
+    - name: Ensure that only zipfile-id or zipfile-name is set, not both
+      if: ${{ inputs.zipfile-id != '' && inputs.zipfile-name != '' }}
+      shell: bash
+      run: |
+        echo "::error title=⛔ error hint::Only one of zipfile-id or zipfile-name can be set"
+        exit 1
+
     - name: Check Runner OS
       if: ${{ runner.os != 'Linux' && runner.os != 'Windows' && runner.os != 'macOS'}}
       shell: bash
@@ -53,6 +72,7 @@ runs:
       uses: actions/download-artifact@v4
       id: download_zipfile
       with:
+        name: ${{ inputs.zipfile-name }}
         artifact-ids: ${{ inputs.zipfile-id }}
         path: ${{ github.action_path }}/build
 
