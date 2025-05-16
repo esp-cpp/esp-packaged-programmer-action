@@ -156,7 +156,7 @@ jobs:
     zipfile-id:
 
     # The name of the artifact to download. 
-    # Mutually exclusive with `zipfile-name`. 
+    # Mutually exclusive with `zipfile-id`. 
     # The artifact should be a zip that contains the files and folder 
     # structure of the build output. Can be created by passing relevant 
     # files to the actions/upload-artifact@v4 action.
