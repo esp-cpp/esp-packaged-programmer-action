@@ -4,7 +4,6 @@ block_cipher = None
 
 # needed for programming
 added_datas = [
-    ('build', 'build'),
     ('esptool/flasher_stub/*.c', './flasher_stub/'),
     ('esptool/flasher_stub/*.py', './flasher_stub/'),
     ('esptool/flasher_stub/ld/*.ld', './flasher_stub/ld/'),
@@ -47,7 +46,7 @@ exe = EXE(pyz,
           a.scripts, 
           a.binaries,
           a.zipfiles,
-          a.datas,
+          a.datas + Tree('build', 'build'),
           name='programmer',
           debug=False,
           bootloader_ignore_signals=False,
