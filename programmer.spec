@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_system_data_files
+
 block_cipher = None
 
 # needed for programming
@@ -12,6 +14,10 @@ added_datas = [
     ('esptool/esptool/targets/*.py', './esptool/targets/'),
     ('esptool/esptool/targets/stub_flasher/*.json', './esptool/targets/stub_flasher/')
 ]
+
+added_datas += collect_system_data_files('build', 'build')
+
+print("added_datas:", added_datas)
 
 # pulled from the requirements.txt
 hidden_imports = [
@@ -39,6 +45,7 @@ a = Analysis(['programmer.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
@@ -46,7 +53,7 @@ exe = EXE(pyz,
           a.scripts, 
           a.binaries,
           a.zipfiles,
-          a.datas + Tree('build', 'build'),
+          a.datas,
           name='programmer',
           debug=False,
           bootloader_ignore_signals=False,
