@@ -80,6 +80,8 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
+        # print the contents of the build directory
+        find build
         # we don't control the name of the unpacked archive (folder) that's
         # within build/ so simply move everything within that subfolder into
         # build/
@@ -87,6 +89,8 @@ runs:
         # also, we don't want any elf files if they were uploaded (which they
         # sometimes are for debug purposes), so delete them
         find build -name "*.elf" -type f -delete
+        # print the contents of the build directory again to ensure we know what we're doing
+        find build
 
     # Build if windows
     - name: PyInstaller
