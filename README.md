@@ -44,7 +44,7 @@ use.
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: esp-cpp/esp-packaged-programmer-action@v1.0.4
+      - uses: esp-cpp/esp-packaged-programmer-action@v1.0.5
         with:
           zipfile-name: 'your-build-artifacts'
           programmer-name: 'your_programmer_name'
@@ -136,7 +136,7 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: esp-cpp/esp-packaged-programmer-action@v1.0.4
+      - uses: esp-cpp/esp-packaged-programmer-action@v1.0.5
         with:
           zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           programmer-name: 'your_programmer_name'
@@ -146,7 +146,7 @@ jobs:
 ### Inputs
 
 ```yaml
-- uses: esp-cpp/download-artifact@v1.0.4
+- uses: esp-cpp/download-artifact@v1.0.5
   with:
     # The ID of the artifact to download. 
     # Mutually exclusive with `zipfile-name`. 
