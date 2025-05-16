@@ -2,17 +2,21 @@ name: 'ESP Packaged Programmer'
 description: 'Package esptool and the binaries into an executable'
 inputs:
   zipfile-id:
-    description: 'Artifact ID for the Zipfile to download. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files. NOTE: only one of zipfile-id or zipfile-name should be set.'
+    description: 'Artifact ID for the Zipfile to download. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files. NOTE: only one of zipfile-id or zipfile-name should be set. The structure of the zip should be the same as the build folder within the esp-idf build - so it should have the tree: build/, build/bootloader/, build/partition_table/'
     required: false
     default: ''
   zipfile-name:
-    description: 'Name of the zipfile artifact that was packaged and uploaded. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files. NOTE: only one of zipfile-id or zipfile-name should be set.'
+    description: 'Name of the zipfile artifact that was packaged and uploaded. Zipfile should contain firmware.bin, bootloader.bin, partition-table.bin, and flasher_args.json. May optionally contain filesystem binaries and associated -flash_args files. NOTE: only one of zipfile-id or zipfile-name should be set. The structure of the zip should be the same as the build folder within the esp-idf build - so it should have the tree: build/, build/bootloader/, build/partition_table/'
     required: false
     default: ''
   programmer-name:
     description: 'Base name of the programmer executable. Will have version tag (e.g. v1.0.0 or commit hash if no tags) and OS suffix (e.g. windows, linux, macos) appended.'
     required: false
     default: 'programmer'
+  exclude-file-globs:
+    description: 'File globs to exclude from the build folder. This is a comma-separated list of filenames or globs. For example: "*.elf,*.pdb,app-flash_args". Defaults to "*.elf".'
+    required: false
+    default: '*.elf'
 outputs:
   artifact-name:
     description: "Name of the programmer artifact that was packaged and uploaded"
@@ -76,21 +80,21 @@ runs:
         artifact-ids: ${{ inputs.zipfile-id }}
         path: ${{ github.action_path }}/build
 
-    - name: Move the artifacts to the build directory
+    - name: Remove any unneeded files from the build folder
       shell: bash
+      if: ${{ inputs.exclude-file-globs != '' }}
       working-directory: ${{ github.action_path }}
       run: |
-        # print the contents of the build directory
-        find build
-        # we don't control the name of the unpacked archive (folder) that's
-        # within build/ so simply move everything within that subfolder into
-        # build/
-        find build -maxdepth 2 -mindepth 2 -exec mv {} build/. \;
-        # also, we don't want any elf files if they were uploaded (which they
-        # sometimes are for debug purposes), so delete them
-        find build -name "*.elf" -type f -delete
-        # print the contents of the build directory again to ensure we know what we're doing
-        find build
+        # for each of the file globs in the exclude-file-globs input, remove the
+        # files from the build folder
+        IFS=',' read -ra globs <<< "${{ inputs.exclude-file-globs }}"
+        for glob in "${globs[@]}"; do
+            # remove the leading and trailing spaces
+            glob=$(echo "$glob" | xargs)
+            echo "Cleaning up files matching pattern: $glob"
+            # remove the files from the build folder
+            find build -name "$glob" -exec rm -rf {} \;
+        done
 
     # Build if windows
     - name: PyInstaller
