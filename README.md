@@ -16,6 +16,7 @@ For an example repository which uses this action, please see
     - [Required Build Artifacts](#required-build-artifacts)
     - [Optional Build Artifacts](#optional-build-artifacts)
   - [Using this action](#using-this-action)
+    - [Inputs](#inputs)
 
 <!-- markdown-toc end -->
 
@@ -139,5 +140,34 @@ jobs:
         with:
           zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           programmer-name: 'your_programmer_name'
+          exclude-file-globs: '*.elf, app-flash_args, bootloader-flash_args, partition-table-flash_args'
 ```
 
+### Inputs
+
+```yaml
+- uses: esp-cpp/download-artifact@v1.0.4
+  with:
+    # The ID of the artifact to download. 
+    # Mutually exclusive with `zipfile-name`. 
+    # The artifact should be a zip that contains the files and folder 
+    # structure of the build output. Can be created by passing relevant 
+    # files to the actions/upload-artifact@v4 action.
+    zipfile-id:
+
+    # The name of the artifact to download. 
+    # Mutually exclusive with `zipfile-name`. 
+    # The artifact should be a zip that contains the files and folder 
+    # structure of the build output. Can be created by passing relevant 
+    # files to the actions/upload-artifact@v4 action.
+    zipfile-name:
+
+    # The base name of the programmer executable. 
+    # Will have version tag (e.g. v1.0.0 or commit hash if no tags) and 
+    # OS suffix (e.g. windows, macos, linux) added to it.
+    programmer-name:
+
+    # Comma-separated list of file names or globs which are present in 
+    # the zipfile but which should be excluded from the packaging. 
+    exclude-file-globs:
+```
