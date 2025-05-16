@@ -6,6 +6,7 @@ block_cipher = None
 
 # needed for programming
 added_datas = [
+    ('build', 'build'),
     ('esptool/flasher_stub/*.c', './flasher_stub/'),
     ('esptool/flasher_stub/*.py', './flasher_stub/'),
     ('esptool/flasher_stub/ld/*.ld', './flasher_stub/ld/'),
@@ -14,10 +15,6 @@ added_datas = [
     ('esptool/esptool/targets/*.py', './esptool/targets/'),
     ('esptool/esptool/targets/stub_flasher/*.json', './esptool/targets/stub_flasher/')
 ]
-
-added_datas += collect_system_data_files('build', 'build')
-
-print("added_datas:", added_datas)
 
 # pulled from the requirements.txt
 hidden_imports = [
