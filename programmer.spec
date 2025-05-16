@@ -1,9 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_system_data_files
+
 block_cipher = None
 
 # needed for programming
 added_datas = [
+    ('build', 'build'),
     ('esptool/flasher_stub/*.c', './flasher_stub/'),
     ('esptool/flasher_stub/*.py', './flasher_stub/'),
     ('esptool/flasher_stub/ld/*.ld', './flasher_stub/ld/'),
@@ -39,6 +42,7 @@ a = Analysis(['programmer.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
@@ -46,7 +50,7 @@ exe = EXE(pyz,
           a.scripts, 
           a.binaries,
           a.zipfiles,
-          a.datas + Tree('build', 'build'),
+          a.datas,
           name='programmer',
           debug=False,
           bootloader_ignore_signals=False,
