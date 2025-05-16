@@ -79,6 +79,9 @@ runs:
         name: ${{ inputs.zipfile-name }}
         artifact-ids: ${{ inputs.zipfile-id }}
         path: ${{ github.action_path }}/build
+        # this is needed to ensure downloading by id doesn't add an additional
+        # folder
+        merge-multiple: true
 
     - name: Remove any unneeded files from the build folder
       shell: bash
