@@ -39,8 +39,14 @@ def main():
     command = ['--baud', '460800',
                '--before', esptool_args['before'],
                '--after', esptool_args['after'],
-               '--chip', esptool_args['chip'],
-               'write_flash']
+               '--chip', esptool_args['chip']]
+
+    stub = esptool_args['stub']
+    print(f'Use flasher stub? {stub}')
+    if not stub:
+        command.append('--no-stub')
+
+    command.append('write_flash')
 
     write_flash_args = flasher_args['write_flash_args']
     # oddly, write_flash_args is a list (whereas everything else is a dict), so
