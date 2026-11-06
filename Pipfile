@@ -4,8 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-esptool = "4.7.0"
-pyinstaller = ">=5.10.1" # required for esptool > 3
+pyinstaller = ">=5.10.1"
 pywin32-ctypes = "*"
 pefile = "*"
 macholib = "*"

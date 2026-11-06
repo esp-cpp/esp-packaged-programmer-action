@@ -1,2 +1,1 @@
-esptool==4.7.0
 pyinstaller>=5.10.1

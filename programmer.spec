@@ -1,32 +1,36 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from PyInstaller.utils.hooks import collect_system_data_files
+from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
 
-# needed for programming
-added_datas = [
-    ('build', 'build'),
-    ('esptool/flasher_stub/*.c', './flasher_stub/'),
-    ('esptool/flasher_stub/*.py', './flasher_stub/'),
-    ('esptool/flasher_stub/ld/*.ld', './flasher_stub/ld/'),
-    ('esptool/flasher_stub/include/*.h', './flasher_stub/include/'),
-    ('esptool/esptool/*.py', './esptool/'),
-    ('esptool/esptool/targets/*.py', './esptool/targets/'),
-    ('esptool/esptool/targets/stub_flasher/*.json', './esptool/targets/stub_flasher/')
-]
+# needed for programming: the build folder, and esptool's package data - the
+# flasher-stub images it loads at runtime - from the INSTALLED esptool (the
+# action installs the clone at the requested tag). Collected generically
+# because the layout moved between majors: esptool 4 keeps the stub JSONs in
+# esptool/targets/stub_flasher/, esptool 5 in versioned subfolders of it.
+added_datas = [('build', 'build')] + collect_data_files('esptool')
 
-# pulled from the requirements.txt
+# dependencies of esptool 4 and 5, whichever of them are installed (esptool 4
+# wants bitstring, ecdsa, six; esptool 5 wants click, rich_click, intelhex,
+# yaml; a hidden import that is not installed is a loud error in the build log)
+import importlib.util
 hidden_imports = [
-    'bitstring',
-    'cffi',
-    'cryptography',
-    'ecdsa',
-    'esptool',
-    'pycparser',
-    'pyserial',
-    'reedsolo',
-    'six'
+    module for module in [
+        'bitstring',
+        'cffi',
+        'click',
+        'cryptography',
+        'ecdsa',
+        'esptool',
+        'intelhex',
+        'pycparser',
+        'reedsolo',
+        'rich_click',
+        'serial',
+        'six',
+        'yaml',
+    ] if importlib.util.find_spec(module) is not None
 ]
 
 a = Analysis(['programmer.py'],

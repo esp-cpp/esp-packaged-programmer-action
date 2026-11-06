@@ -46,7 +46,14 @@ def main():
     if not stub:
         command.append('--no-stub')
 
-    command.append('write_flash')
+    # esptool 5 renamed its commands with dashes (write-flash) and the ESP-IDF
+    # builds that use it generate dash-spelled options into flasher_args.json;
+    # esptool 4 only knows the underscore form. The packaged esptool is the
+    # version the action was given, so pick the spelling it understands.
+    esptool_version = getattr(esptool, '__version__', '0')
+    print(f'Packaged esptool version: {esptool_version}')
+    esptool_major = int(esptool_version.split('.')[0]) if esptool_version[:1].isdigit() else 0
+    command.append('write-flash' if esptool_major >= 5 else 'write_flash')
 
     write_flash_args = flasher_args['write_flash_args']
     # oddly, write_flash_args is a list (whereas everything else is a dict), so
@@ -101,7 +108,13 @@ def main():
         print(f'Automatically detecting {esptool_args["chip"]} on serial port')
 
     print('Using command arguments: %s' % ' '.join(command))
-    esptool.main(command)
+    try:
+        esptool.main(command)
+    except SystemExit:
+        raise
+    except Exception as e:  # esptool 5 raises on failure (esptool 4 exits)
+        print(f'Flashing failed: {e}')
+        sys.exit(2)
 
 if __name__ == '__main__':
     main()

@@ -17,6 +17,14 @@ inputs:
     description: 'File globs to exclude from the build folder. This is a comma-separated list of filenames or globs. For example: "*.elf,*.pdb,app-flash_args". Defaults to "*.elf".'
     required: false
     default: '*.elf'
+  esptool-version:
+    description: 'Git tag of espressif/esptool to package, e.g. v4.7.0 or v5.6.0 (a leading "v" is added if missing). Use the version your build used: the flash arguments ESP-IDF generates into flasher_args.json / *-flash_args follow the tool (esptool 5 spells options with dashes, e.g. --flash-mode), so the packaged esptool must be the one they were written for; ESP-IDF 5.x builds with esptool 4.x, ESP-IDF 6.x with esptool 5.x. Leave it empty to take the version from a build/esptool_version.txt in the zipfile, which the build job writes with `python -m esptool version | tail -1 > build/esptool_version.txt` (see the README). With neither, v4.7.0 is packaged, with a warning.'
+    required: false
+    default: ''
+  python-version:
+    description: 'Python version to build the programmer with (actions/setup-python). esptool 4.x needs 3.7 or newer, esptool 5.x needs 3.10 or newer, so the default 3.10 serves both; raise it when a future esptool asks for more (pip refuses an esptool whose requires-python the chosen interpreter does not satisfy, and the build fails there, before packaging).'
+    required: false
+    default: '3.10'
 outputs:
   artifact-name:
     description: "Name of the programmer artifact that was packaged and uploaded"
@@ -70,7 +78,7 @@ runs:
       uses: actions/setup-python@v5
       id: id_python_310
       with:
-        python-version: '3.10'
+        python-version: ${{ inputs.python-version }}
 
     - name: Download the zipfile artifact
       uses: actions/download-artifact@v4
@@ -99,18 +107,65 @@ runs:
             find build -name "$glob" -exec rm -rf {} \;
         done
 
+    - name: Resolve the esptool version to package
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        # through the environment, never interpolated into the script: the
+        # value comes from a caller's input or a build job's output
+        ESPTOOL_VERSION_INPUT: ${{ inputs.esptool-version }}
+      run: |
+        # the input, else build/esptool_version.txt from the zipfile (written by
+        # the build job from the esptool its ESP-IDF used), else v4.7.0
+        version="$(echo "$ESPTOOL_VERSION_INPUT" | xargs)"
+        if [ -n "$version" ]; then
+          echo "esptool version from the esptool-version input: $version"
+        elif [ -f build/esptool_version.txt ]; then
+          version="$(head -1 build/esptool_version.txt | xargs)"
+          echo "esptool version from build/esptool_version.txt in the zipfile: $version"
+        else
+          version="v4.7.0"
+          echo "::warning title=esptool version not given::Packaging esptool $version. Set the esptool-version input, or have the build job write the version it used to build/esptool_version.txt, so the packaged esptool matches the flash arguments ESP-IDF generated (see the README)."
+        fi
+        case "$version" in v*) ;; *) version="v$version" ;; esac
+        # a git tag of esptool's and nothing else (v4.7.0, v5.3.dev3 ...): the
+        # value reaches git and pip as an argument, and it came from a file in
+        # an artifact or a caller's input
+        tag_pattern='^v[0-9]+(\.[0-9A-Za-z]+)*$'
+        if ! [[ "$version" =~ $tag_pattern ]]; then
+          echo "::error title=⛔ error hint::esptool version '$version' is not a release tag like v4.7.0 or v5.6.0"
+          exit 1
+        fi
+        echo "Packaging esptool $version"
+        echo "esptool_version=$version" >> "$GITHUB_ENV"
+
     # Build if windows
     - name: PyInstaller
       if: ${{ runner.os == 'Windows'}}
       working-directory: ${{ github.action_path }}
       shell: pwsh
       run: |
-        # setup the python environment
+        # a failed native command does not stop a PowerShell script by itself
+        function Check($what) {
+          if ($LASTEXITCODE -ne 0) { Write-Error "$what failed with exit code $LASTEXITCODE"; exit 1 }
+        }
+        # setup the python environment (pyinstaller and esptool's dependencies)
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
-        # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
-        git clone --depth 1 --branch v4.7.0 https://github.com/espressif/esptool
+        Check "pip install -r requirements.txt"
+        # clone esptool at the requested tag (resolved and validated by the
+        # step above, read from the environment at runtime) and install THAT:
+        # the packaged esptool (and its flasher-stub data, collected by
+        # programmer.spec from the installed package) is then exactly the
+        # version the caller built with
+        git clone --depth 1 --branch $env:esptool_version https://github.com/espressif/esptool
+        Check "git clone esptool $env:esptool_version"
+        ${{ steps.id_python_310.outputs.python-path }} -m pip install ./esptool
+        Check "pip install ./esptool"
+        ${{ steps.id_python_310.outputs.python-path }} -m esptool version
+        Check "esptool version"
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
+        Check "PyInstaller"
         # now actually make the artifact
         $artifact_name="${{ inputs.programmer-name }}_${{ env.version_str }}_windows.exe"
         mv dist/programmer.exe ${artifact_name}
@@ -122,12 +177,19 @@ runs:
       working-directory: ${{ github.action_path }}
       shell: bash
       run: |
+        set -euo pipefail
         # save the runner OS to a variable in lower case
         os_name=$(echo ${{ runner.os }} | tr '[:upper:]' '[:lower:]')
-        # setup the python environment
+        # setup the python environment (pyinstaller and esptool's dependencies)
         ${{ steps.id_python_310.outputs.python-path }} -m pip install -r requirements.txt
-        # we need to clone v4.7.0 of esptool into the repo to ensure all of its data is properly packaged
-        git clone --depth 1 --branch v4.7.0 https://github.com/espressif/esptool
+        # clone esptool at the requested tag (resolved and validated by the
+        # step above, read from the environment at runtime) and install THAT:
+        # the packaged esptool (and its flasher-stub data, collected by
+        # programmer.spec from the installed package) is then exactly the
+        # version the caller built with
+        git clone --depth 1 --branch "$esptool_version" https://github.com/espressif/esptool
+        ${{ steps.id_python_310.outputs.python-path }} -m pip install ./esptool
+        ${{ steps.id_python_310.outputs.python-path }} -m esptool version
         # now build the installer
         ${{ steps.id_python_310.outputs.python-path }} -m PyInstaller --clean programmer.spec
         # now actually make the artifact
