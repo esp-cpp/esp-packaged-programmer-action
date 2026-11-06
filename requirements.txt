@@ -1,2 +1,4 @@
-esptool==4.7.0
+# esptool itself is installed by the action from a clone at the requested tag
+# (the esptool-version input), so the packaged tool matches the caller's build;
+# for local development: pip install esptool==<the version you build with>
 pyinstaller>=5.10.1

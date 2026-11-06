@@ -27,6 +27,24 @@ files, or installation, but allows anyone to flash your code onto the
 appropriate espressif chip.
 
 It simply packages `esptool.py` with your binaries/flash_args (from your build).
+The esptool packaged should be the version your build used, since the flash
+arguments ESP-IDF writes into `flasher_args.json` and the `*-flash_args` files
+follow the tool (ESP-IDF 5.x uses esptool 4.x, ESP-IDF 6.x uses esptool 5.x,
+which spells options with dashes). The easiest way is to have the build job
+record it: one extra command in the build step writes the version ESP-IDF's
+own esptool reports into the build folder, the zip carries it, and this
+action picks it up. The `esptool-version` input overrides that.
+
+```yaml
+      - name: Build the code
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.1
+          target: esp32s3
+          path: '.'
+          # record the esptool version this build used, for the packaging job
+          command: idf.py build && python -m esptool version | tail -1 > build/esptool_version.txt
+```
 
 This action will upload the resultant executable to the Github Action Job, and
 (if triggered from release) to the release as well.
@@ -48,6 +66,9 @@ use.
         with:
           zipfile-name: 'your-build-artifacts'
           programmer-name: 'your_programmer_name'
+          # the esptool version comes from build/esptool_version.txt in the
+          # zip (see above); to pin it instead:
+          # esptool-version: 'v5.6.0'
 ```
 
 > NOTE: you can use either `zipfile-name` or `zipfile-id` as input to this
@@ -113,7 +134,9 @@ jobs:
           esp_idf_version: v5.4.1
           target: esp32s3
           path: '.'
-          command: idf.py build
+          # the second command records the esptool version ESP-IDF v5.4.1
+          # builds with (4.x), so the packaging job packages the same one
+          command: idf.py build && python -m esptool version | tail -1 > build/esptool_version.txt
       - name: Upload build files in a single zip
         id: zip_step
         uses: actions/upload-artifact@v4
@@ -127,6 +150,7 @@ jobs:
             build/flasher_args.json
             build/flash_args
             build/*-flash_args
+            build/esptool_version.txt
 
   package:
     name: Package the binaries into an executables for Windows, MacOS, and Linux (Ubuntu)
@@ -141,6 +165,8 @@ jobs:
           zipfile-id: ${{ needs.build.outputs.zipfile-id }}
           programmer-name: 'your_programmer_name'
           exclude-file-globs: '*.elf, app-flash_args, bootloader-flash_args, partition-table-flash_args'
+          # esptool-version is not set: it is read from build/esptool_version.txt
+          # in the zip, written by the build job above
 ```
 
 ### Inputs
@@ -170,4 +196,38 @@ jobs:
     # Comma-separated list of file names or globs which are present in 
     # the zipfile but which should be excluded from the packaging. 
     exclude-file-globs:
+
+    # Git tag of espressif/esptool to package, e.g. v4.7.0 or v5.6.0 (a
+    # leading "v" is added if missing). Use the version your build used:
+    # the flash arguments ESP-IDF generates into flasher_args.json /
+    # *-flash_args follow the tool (esptool 5 spells options with dashes,
+    # e.g. --flash-mode), so the packaged esptool must be the one they were
+    # written for. ESP-IDF 5.x builds with esptool 4.x, ESP-IDF 6.x with
+    # esptool 5.x. Leave it empty (the default) to take the version from
+    # build/esptool_version.txt in the zipfile, which the build job writes
+    # with `python -m esptool version | tail -1 > build/esptool_version.txt`
+    # (see the examples). With neither, v4.7.0 is packaged, with a warning.
+    esptool-version:
+```
+
+If you would rather pass the version explicitly (a matrix of ESP-IDF versions,
+say), read the file in the build job and hand it over as a job output:
+
+```yaml
+  build:
+    outputs:
+      zipfile-id: ${{ steps.zip_step.outputs.artifact-id }}
+      esptool-version: ${{ steps.esptool_version.outputs.version }}
+    steps:
+      # ... build with `&& python -m esptool version | tail -1 > build/esptool_version.txt`
+      - id: esptool_version
+        run: echo "version=$(cat build/esptool_version.txt)" >> "$GITHUB_OUTPUT"
+      # ... zip
+  package:
+    needs: build
+    steps:
+      - uses: esp-cpp/esp-packaged-programmer-action@v1
+        with:
+          zipfile-id: ${{ needs.build.outputs.zipfile-id }}
+          esptool-version: ${{ needs.build.outputs.esptool-version }}
 ```
