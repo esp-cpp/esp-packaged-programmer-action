@@ -21,6 +21,10 @@ inputs:
     description: 'Git tag of espressif/esptool to package, e.g. v4.7.0 or v5.6.0 (a leading "v" is added if missing). Use the version your build used: the flash arguments ESP-IDF generates into flasher_args.json / *-flash_args follow the tool (esptool 5 spells options with dashes, e.g. --flash-mode), so the packaged esptool must be the one they were written for; ESP-IDF 5.x builds with esptool 4.x, ESP-IDF 6.x with esptool 5.x. Leave it empty to take the version from a build/esptool_version.txt in the zipfile, which the build job writes with `python -m esptool version | tail -1 > build/esptool_version.txt` (see the README). With neither, v4.7.0 is packaged, with a warning.'
     required: false
     default: ''
+  python-version:
+    description: 'Python version to build the programmer with (actions/setup-python). esptool 4.x needs 3.7 or newer, esptool 5.x needs 3.10 or newer, so the default 3.10 serves both; raise it when a future esptool asks for more (pip refuses an esptool whose requires-python the chosen interpreter does not satisfy, and the build fails there, before packaging).'
+    required: false
+    default: '3.10'
 outputs:
   artifact-name:
     description: "Name of the programmer artifact that was packaged and uploaded"
@@ -74,7 +78,7 @@ runs:
       uses: actions/setup-python@v5
       id: id_python_310
       with:
-        python-version: '3.10'
+        python-version: ${{ inputs.python-version }}
 
     - name: Download the zipfile artifact
       uses: actions/download-artifact@v4

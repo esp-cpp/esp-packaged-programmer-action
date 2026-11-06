@@ -208,6 +208,13 @@ jobs:
     # with `python -m esptool version | tail -1 > build/esptool_version.txt`
     # (see the examples). With neither, v4.7.0 is packaged, with a warning.
     esptool-version:
+
+    # Python version to build the programmer with. esptool 4.x needs 3.7 or
+    # newer, esptool 5.x needs 3.10 or newer, so the default serves both;
+    # raise it when a future esptool asks for more (pip refuses an esptool
+    # whose requires-python the interpreter does not satisfy, and the build
+    # fails there, before packaging). Default: 3.10
+    python-version:
 ```
 
 If you would rather pass the version explicitly (a matrix of ESP-IDF versions,
